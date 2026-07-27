@@ -1,11 +1,11 @@
 package com.example.springbootdemo;
 
-public class mac_order {
+public class MacOrder {
         private Integer id;
         private String food_name;
         private Integer order_number;
         private Integer quantity;
-        private String status;
+        private String remark;
 
         // ==================== 下面是标准老规矩：Getter / Setter ====================
         public Integer getId() { return id; }
@@ -20,6 +20,6 @@ public class mac_order {
         public Integer getQuantity() { return quantity; }
         public void setQuantity(Integer position) { this.quantity = position; }
 
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
+        public String getRemark() { return remark; }
+        public void setRemark(String status) { this.remark = status; }
 }

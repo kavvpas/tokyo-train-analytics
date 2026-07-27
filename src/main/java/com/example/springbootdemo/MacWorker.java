@@ -1,6 +1,6 @@
 package com.example.springbootdemo;
 
-public class mac_worker {
+public class MacWorker {
         private Integer id;
         private String name;
         private Integer hourly_wage;

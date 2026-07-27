@@ -1,42 +1,25 @@
 package com.tokyo.train.model.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data               // 🌟 终极神注：全自动生成所有属性的 Getter、Setter、toString、equals 方法！
+@NoArgsConstructor  // 🌟 全自动生成无参构造方法：public TrainDelayEntity() {}
+@AllArgsConstructor // 🌟 全自动生成包含所有属性的构造方法（带ID的那个）
 public class TrainDelayEntity {
-    // 🌟 大厂规范：Entity 必须拥有跟数据库一模一样的自增主键 id！
+
     private Integer id;
     private String lineName;
     private String status;
     private Integer delayMinutes;
     private String reason;
 
-    // 空构造方法
-    public TrainDelayEntity() {}
-
-    // 全参数构造方法
-    public TrainDelayEntity(Integer id, String lineName, String status, Integer delayMinutes, String reason) {
-        this.id = id;
-        this.lineName = lineName;
-        this.status = status;
-        this.delayMinutes = delayMinutes;
-        this.reason = reason;
-    }
-
-    // 快捷构造方法（方便爬虫拼装，不带ID）
+    // 💡 只有这个特殊的、不带 ID 的构造方法（专门给爬虫用的），需要我们单独保留
     public TrainDelayEntity(String lineName, String status, Integer delayMinutes, String reason) {
         this.lineName = lineName;
         this.status = status;
         this.delayMinutes = delayMinutes;
         this.reason = reason;
     }
-
-    // 标准的 Getter 和 Setter
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    public String getLineName() { return lineName; }
-    public void setLineName(String lineName) { this.lineName = lineName; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public Integer getDelayMinutes() { return delayMinutes; }
-    public void setDelayMinutes(Integer delayMinutes) { this.delayMinutes = delayMinutes; }
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
 }

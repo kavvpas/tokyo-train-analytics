@@ -1,6 +1,7 @@
 package com.tokyo.train.controller;
 
 import com.tokyo.train.model.dto.MorningPeakAnalyticsDTO;
+import com.tokyo.train.model.dto.Result;
 import com.tokyo.train.model.entity.TrainDelayEntity;
 import com.tokyo.train.service.TrainService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,21 +20,15 @@ public class TrainController {
         this.trainService = trainService;
     }
 
-    /**
-     * 接口一：触发爬虫，抓取 ODPT 并自动多表落库
-     * 访问地址：http://localhost:8080/api/train/delays
-     */
     @GetMapping("/delays")
-    public List<TrainDelayEntity> getDelays() {
-        return trainService.fetchAndSaveRealTimeData();
+    public Result<List<TrainDelayEntity>> getDelays() {
+        List<TrainDelayEntity> data = trainService.fetchAndSaveRealTimeData();
+        return Result.success(data); // 🌟 用 Result.success() 统一包裹！
     }
 
-    /**
-     * 接口二：🌟 核心商业分析接口，展示多表 JOIN 聚合算出来的早高峰延误报表！
-     * 访问地址：http://localhost:8080/api/train/analytics/morning-peak
-     */
     @GetMapping("/analytics/morning-peak")
-    public List<MorningPeakAnalyticsDTO> getMorningPeakAnalytics() {
-        return trainService.getMorningPeakAnalytics();
+    public Result<List<MorningPeakAnalyticsDTO>> getMorningPeakAnalytics() {
+        List<MorningPeakAnalyticsDTO> data = trainService.getMorningPeakAnalytics();
+        return Result.success(data); // 🌟 用 Result.success() 统一包裹！
     }
 }
