@@ -82,7 +82,7 @@ Bash
 docker-compose up -d --build
 ブラウザでアクセス
 
-http://localhost:8080
+[http://localhost:8080](http://localhost:8081/train.html)
 👤 開発者（Developer）
 氏名: 韓 瑞敏（HAN RUIMIN）
 
