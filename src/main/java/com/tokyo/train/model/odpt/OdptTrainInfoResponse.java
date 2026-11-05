@@ -14,6 +14,10 @@ public class OdptTrainInfoResponse {
     @JsonProperty("odpt:railway")
     private String railway;
 
+    /** 運行情報の発表日時(ISO 8601)。 */
+    @JsonProperty("dc:date")
+    private String date;
+
     @JsonProperty("odpt:trainInformationText")
     private TrainText trainInformationText;
 

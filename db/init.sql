@@ -10,9 +10,13 @@ CREATE TABLE IF NOT EXISTS delay_events (
     line_id       INT          NOT NULL,
     status        VARCHAR(20)  NOT NULL,
     delay_minutes INT          NOT NULL DEFAULT 0,
-    reason        VARCHAR(255),
-    event_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_delay_line FOREIGN KEY (line_id) REFERENCES train_lines(id)
+    reason        VARCHAR(255) NOT NULL DEFAULT '',
+    source        VARCHAR(10)  NOT NULL DEFAULT 'API',     -- API / SAMPLE
+    occurred_at   DATETIME     NOT NULL,                   -- 運行情報の発表日時(集計はこの時刻で行う)
+    event_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP, -- 入庫時刻
+    CONSTRAINT fk_delay_line FOREIGN KEY (line_id) REFERENCES train_lines(id),
+    -- 同じ路線・同じ発表日時・同じ本文は同一イベントとみなし、重複登録を防ぐ
+    UNIQUE KEY uk_event (line_id, occurred_at, reason)
 );
 
 INSERT INTO train_lines (line_name, operator_name) VALUES

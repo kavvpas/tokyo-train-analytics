@@ -9,6 +9,10 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,9 +34,11 @@ public class DelayCrawler {
 
     public List<TrainDelayEntity> crawlRealTimeData() {
         List<OdptTrainInfoResponse> responses = fetchFromApi();
+        String source = "API";
         if (responses == null) {
             log.info("API 未設定または取得失敗のため、サンプルデータを使用します");
             responses = createSampleData();
+            source = "SAMPLE";
         }
 
         List<TrainDelayEntity> result = new ArrayList<>();
@@ -41,7 +47,8 @@ public class DelayCrawler {
             String text = (res.getTrainInformationText() != null && res.getTrainInformationText().getJa() != null)
                     ? res.getTrainInformationText().getJa() : "";
             Classification c = classify(text);
-            result.add(new TrainDelayEntity(lineName, c.status(), c.delayMinutes(), text));
+            result.add(new TrainDelayEntity(lineName, c.status(), c.delayMinutes(), text,
+                    source, parseOccurredAt(res.getDate())));
         }
         return result;
     }
@@ -63,6 +70,9 @@ public class DelayCrawler {
 
     /** 本文のキーワードから状態と遅延分数を推定する(簡易ルール)。 */
     public static Classification classify(String text) {
+        if (text.contains("影響はありません") || text.contains("再開しました")) {
+            return new Classification("平常運転", 0);
+        }
         if (text.contains("見合わせ") || text.contains("運休")) {
             return new Classification("運休", 45);
         }
@@ -79,6 +89,16 @@ public class DelayCrawler {
         if (railway.contains("ToeiOedo")) return "大江戸線";
         if (railway.contains("Chuo")) return "中央線";
         return null;
+    }
+
+    /** ISO 8601 の発表日時を東京時間の LocalDateTime に変換する。空または不正なら null。 */
+    static LocalDateTime parseOccurredAt(String isoDate) {
+        if (isoDate == null || isoDate.isBlank()) return null;
+        try {
+            return OffsetDateTime.parse(isoDate).atZoneSameInstant(ZoneId.of("Asia/Tokyo")).toLocalDateTime();
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     public record Classification(String status, int delayMinutes) {}

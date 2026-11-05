@@ -7,7 +7,8 @@ Java / Spring Boot / SQL の学習を目的に、個人で作成しました。
 
 - 対象路線は **山手線・中央線・大江戸線の 3 路線のみ**です。
 - 運行情報の取得元は、**API の URL を設定した場合のみ外部 API**(ODPT 形式の JSON を想定)を呼びます。未設定の場合や取得に失敗した場合は、**コード内のサンプルデータ**を使います。実際の運行状況は取得していません。
-- 遅延分数は本文のキーワードによる**簡易的な推定値**です(「遅延」「影響」→15 分、「見合わせ」「運休」→45 分)。
+- **サンプルデータは DB に保存しません**(統計を汚さないため)。保存されるのは、API から取得し、発表日時(`dc:date`)が分かるデータのみです。実際の ODPT API への接続(API キーの取得)は未検証です。
+- 遅延分数は本文のキーワードによる**簡易的な推定値**です(「遅延」「影響」→15 分、「見合わせ」「運休」→45 分。「影響はありません」「再開しました」は平常運転)。
 - 画面(フロントエンド)はありません。JSON を返す API のみです。
 
 ## 使用技術
@@ -23,10 +24,12 @@ Java / Spring Boot / SQL の学習を目的に、個人で作成しました。
 
 ## 機能
 
+- `POST /api/train/delays/fetch`
+  運行情報を取得し、路線マスタに存在する路線の分を `delay_events` に保存します(`@Transactional`。重複は唯一キーで無視)。**新しく保存した件数**を返します。
 - `GET /api/train/delays`
-  運行情報を取得し、路線マスタに存在する路線の分を `delay_events` に保存して、取得内容を返します。
+  保存済みの遅延イベントを新しい順に最大 50 件返します(読み取り専用)。
 - `GET /api/train/analytics/morning-peak`
-  `train_lines` と `delay_events` を `LEFT JOIN` し、`GROUP BY` で路線ごとの遅延件数・平均遅延分数を集計して返します(イベントが 0 件の路線も 0 で表示)。
+  `train_lines` と `delay_events` を `LEFT JOIN` し(条件は `ON` に記述)、7〜9 時台の遅延について路線ごとの件数・平均遅延分数を集計して返します(イベントが 0 件の路線も 0 で表示)。
 - 共通レスポンス形式(`Result<T>`)と、`@RestControllerAdvice` による例外ハンドリング。
 
 レスポンス例:
@@ -46,8 +49,16 @@ Java / Spring Boot / SQL の学習を目的に、個人で作成しました。
 
 ```
 train_lines (id PK, line_name UNIQUE, operator_name)
-delay_events (id PK, line_id FK -> train_lines.id, status, delay_minutes, reason, event_time)
+delay_events (id PK, line_id FK -> train_lines.id, status, delay_minutes, reason,
+              source, occurred_at, event_time,
+              UNIQUE (line_id, occurred_at, reason))
 ```
+
+- `occurred_at`: 運行情報の発表日時(集計はこの時刻で行う)
+- `event_time`: 入庫時刻
+- 唯一キーにより、同じ路線・同じ発表日時・同じ本文の重複登録を防ぎます(`INSERT IGNORE`)。
+
+既存の DB を更新する場合は [`db/migration_001.sql`](db/migration_001.sql) を実行してください(旧データは削除されます)。
 
 DDL と初期データは [`db/init.sql`](db/init.sql) にあります。
 
@@ -61,6 +72,7 @@ docker compose up --build
 ```
 
 ```bash
+curl -X POST http://localhost:8081/api/train/delays/fetch
 curl http://localhost:8081/api/train/delays
 curl http://localhost:8081/api/train/analytics/morning-peak
 ```
@@ -72,6 +84,7 @@ curl http://localhost:8081/api/train/analytics/morning-peak
 
 ```bash
 export DB_PASSWORD=your-password      # 必要に応じて DB_URL / DB_USERNAME も
+# または、プロジェクト直下に .env(DB_PASSWORD=...)を作成しても読み込まれます(Git 管理外)
 mvn spring-boot:run
 ```
 
@@ -103,7 +116,9 @@ src/main/java/com/tokyo/train/
 
 - 対象路線の拡大と、実際の公開 API(ODPT など)への接続
 - 遅延分数の推定ロジックの改善
-- 集計クエリや API の結合テストの追加
+- リポジトリ層・集計クエリの結合テストの追加(現在は classify 等の単体テストのみ)
+- 路線名から ID を引く処理の一括化(現在は 1 件ずつ検索)
+- 定期取得(`@Scheduled`)の追加
 - 画面の作成(React を学習中)
 - JDBC から MyBatis / Spring Data JPA への置き換えの検討
 
@@ -111,3 +126,11 @@ src/main/java/com/tokyo/train/
 
 個人学習で作成したコードを、2026 年 10 月に整理して公開しました。
 整理にあたり、DB 接続情報の環境変数化、テストの追加、Docker 構成の追加、コードコメントの整理を行っています。
+
+### 2026 年 11 月の改善
+
+- 集計 SQL: フィルタ条件を `WHERE` から `ON` に移し、イベントが 0 件の路線も 0 で表示されるよう修正。
+- 遅延判定: 「影響はありません」「再開しました」を遅延と誤判定する問題を、パラメータ化テストで再現して修正。
+- トランザクション: Service に `@Transactional` を付与し、`TransactionAwareDataSourceProxy` で JDBC を事務に参加させた。途中で失敗した場合に 0 件になること(ロールバック)を確認。
+- API 設計: 保存を伴う処理を `GET` から `POST` に分離し、`GET` は読み取り専用に変更。
+- データ品質: サンプルデータを保存しないようにし、唯一キーと `INSERT IGNORE` で重複登録を防止。集計の基準時刻を入庫時刻から発表日時に変更。
