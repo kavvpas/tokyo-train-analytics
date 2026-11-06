@@ -12,7 +12,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** JDBC(PreparedStatement)で MySQL にアクセスする。 */
 @Repository
@@ -24,19 +26,20 @@ public class DelayRepository {
         this.dataSource = new TransactionAwareDataSourceProxy(dataSource);
     }
 
-    /** 路線名から train_lines の id を取得する。見つからなければ null。 */
-    public Integer findLineIdByName(String lineName) {
-        if (lineName == null) return null;
-        String sql = "SELECT id FROM train_lines WHERE line_name = ? LIMIT 1";
+    /** train_lines の全路線を 1 回のクエリで取得し、路線名 → id の Map にして返す。 */
+    public Map<String, Integer> findAllLineIds() {
+        String sql = "SELECT id, line_name FROM train_lines";
+        Map<String, Integer> map = new HashMap<>();
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, lineName);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt("id") : null;
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                map.put(rs.getString("line_name"), rs.getInt("id"));
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("路線 ID の取得に失敗しました", e);
+            throw new IllegalStateException("路線一覧の取得に失敗しました", e);
         }
+        return map;
     }
 
     /**

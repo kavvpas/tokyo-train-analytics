@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class TrainService {
@@ -31,6 +32,8 @@ public class TrainService {
     public int fetchAndSaveRealTimeData() {
         List<TrainDelayEntity> rawData = delayCrawler.crawlRealTimeData();
         int saved = 0;
+        // 路線マスタは 1 回のクエリで取得し、ループ内では DB に問い合わせない
+        Map<String, Integer> lineIds = delayRepository.findAllLineIds();
 
         for (TrainDelayEntity entity : rawData) {
             // サンプルデータや発表日時が不明のデータは保存しない(統計を汚さない)
@@ -39,7 +42,7 @@ public class TrainService {
                         entity.getSource(), entity.getOccurredAt(), entity.getLineName());
                 continue;
             }
-            Integer lineId = delayRepository.findLineIdByName(entity.getLineName());
+            Integer lineId = lineIds.get(entity.getLineName());
             if (lineId == null) {
                 log.warn("路線マスタに存在しないためスキップ: {}", entity.getLineName());
                 continue;

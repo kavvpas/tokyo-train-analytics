@@ -117,7 +117,6 @@ src/main/java/com/tokyo/train/
 - 対象路線の拡大と、実際の公開 API(ODPT など)への接続
 - 遅延分数の推定ロジックの改善
 - リポジトリ層・集計クエリの結合テストの追加(現在は classify 等の単体テストのみ)
-- 路線名から ID を引く処理の一括化(現在は 1 件ずつ検索)
 - 定期取得(`@Scheduled`)の追加
 - 画面の作成(React を学習中)
 - JDBC から MyBatis / Spring Data JPA への置き換えの検討
@@ -134,3 +133,4 @@ src/main/java/com/tokyo/train/
 - トランザクション: Service に `@Transactional` を付与し、`TransactionAwareDataSourceProxy` で JDBC を事務に参加させた。途中で失敗した場合に 0 件になること(ロールバック)を確認。
 - API 設計: 保存を伴う処理を `GET` から `POST` に分離し、`GET` は読み取り専用に変更。
 - データ品質: サンプルデータを保存しないようにし、唯一キーと `INSERT IGNORE` で重複登録を防止。集計の基準時刻を入庫時刻から発表日時に変更。
+- 性能: 路線名から ID を引く処理を、1 件ずつの検索から「路線マスタを 1 回で取得して Map で参照」に変更(N+1 問題の解消)。
