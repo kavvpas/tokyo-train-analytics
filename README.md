@@ -1,5 +1,7 @@
 # tokyo-train-analytics
 
+[![CI](https://github.com/kavvpas/tokyo-train-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/kavvpas/tokyo-train-analytics/actions/workflows/ci.yml)
+
 東京の電車の運行情報(遅延・運休)を取得して MySQL に蓄積し、路線ごとの遅延件数と平均遅延時間を集計して返す Spring Boot の REST API です。
 Java / Spring Boot / SQL の学習を目的に、個人で作成しました。
 
