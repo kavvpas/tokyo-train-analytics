@@ -57,8 +57,8 @@ public class TrainService {
 
     /** 保存済みの遅延イベントを読み取るだけ(DB を変更しない)。 */
     @Transactional(readOnly = true)
-    public List<DelayEventViewDTO> getRecentDelays() {
-        return delayRepository.findRecentEvents();
+    public List<DelayEventViewDTO> getRecentDelays(int limit) {
+        return delayRepository.findRecentEvents(limit);
     }
 
     public List<MorningPeakAnalyticsDTO> getMorningPeakAnalytics() {

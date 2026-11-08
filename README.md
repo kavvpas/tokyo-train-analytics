@@ -19,18 +19,20 @@ Java / Spring Boot / SQL の学習を目的に、個人で作成しました。
 | フレームワーク | Spring Boot 3.3.5(Spring Web) |
 | DB | MySQL 8.0(JDBC / PreparedStatement) |
 | ビルド | Maven |
-| テスト | JUnit 5 |
+| テスト | JUnit 5 / Mockito / MockMvc |
 | その他 | Docker / Docker Compose、Git / GitHub |
 
 ## 機能
 
 - `POST /api/train/delays/fetch`
   運行情報を取得し、路線マスタに存在する路線の分を `delay_events` に保存します(`@Transactional`。重複は唯一キーで無視)。**新しく保存した件数**を返します。
-- `GET /api/train/delays`
-  保存済みの遅延イベントを新しい順に最大 50 件返します(読み取り専用)。
+- `GET /api/train/delays?limit=50`
+  保存済みの遅延イベントを新しい順に返します(読み取り専用)。`limit` は 1〜100(既定 50)。範囲外や数値以外は HTTP 400 と共通形式の JSON を返します。
+- `GET /actuator/health`
+  ヘルスチェック(DB 接続を含む)。
 - `GET /api/train/analytics/morning-peak`
   `train_lines` と `delay_events` を `LEFT JOIN` し(条件は `ON` に記述)、7〜9 時台の遅延について路線ごとの件数・平均遅延分数を集計して返します(イベントが 0 件の路線も 0 で表示)。
-- 共通レスポンス形式(`Result<T>`)と、`@RestControllerAdvice` による例外ハンドリング。
+- 共通レスポンス形式(`Result<T>`)と、`@RestControllerAdvice` による例外ハンドリング(400 / 404 / 500 を区別)。
 
 レスポンス例:
 
@@ -88,7 +90,7 @@ export DB_PASSWORD=your-password      # 必要に応じて DB_URL / DB_USERNAME 
 mvn spring-boot:run
 ```
 
-テスト: `mvn test`
+テスト: `mvn test`(Java 17 が必要。Service は Mockito、Controller は `@WebMvcTest`、判定ロジックはパラメータ化テスト)
 
 ### 設定(環境変数)
 
@@ -116,7 +118,7 @@ src/main/java/com/tokyo/train/
 
 - 対象路線の拡大と、実際の公開 API(ODPT など)への接続
 - 遅延分数の推定ロジックの改善
-- リポジトリ層・集計クエリの結合テストの追加(現在は classify 等の単体テストのみ)
+- リポジトリ層・集計クエリの結合テストの追加(DB を使うテストは未整備)
 - 定期取得(`@Scheduled`)の追加
 - 画面の作成(React を学習中)
 - JDBC から MyBatis / Spring Data JPA への置き換えの検討
@@ -134,3 +136,5 @@ src/main/java/com/tokyo/train/
 - API 設計: 保存を伴う処理を `GET` から `POST` に分離し、`GET` は読み取り専用に変更。
 - データ品質: サンプルデータを保存しないようにし、唯一キーと `INSERT IGNORE` で重複登録を防止。集計の基準時刻を入庫時刻から発表日時に変更。
 - 性能: 路線名から ID を引く処理を、1 件ずつの検索から「路線マスタを 1 回で取得して Map で参照」に変更(N+1 問題の解消)。
+- テスト: Service(Mockito)と Controller(MockMvc)の単体テストを追加。パラメータ検証と、検証エラー時に Service が呼ばれないことを確認。
+- 運用: `limit` の入力検証と 400 エラーの共通 JSON 化、`/actuator/health` を追加。

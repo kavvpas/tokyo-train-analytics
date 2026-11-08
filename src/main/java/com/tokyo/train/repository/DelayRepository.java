@@ -96,27 +96,29 @@ public class DelayRepository {
         return list;
     }
 
-    /** 保存済みの遅延イベントを新しい順に最大 50 件取得する(読み取り専用)。 */
-    public List<DelayEventViewDTO> findRecentEvents() {
+    /** 保存済みの遅延イベントを新しい順に最大 limit 件取得する(読み取り専用)。 */
+    public List<DelayEventViewDTO> findRecentEvents(int limit) {
         String sql = """
                 SELECT l.line_name, e.status, e.delay_minutes, e.reason, e.occurred_at, e.source
                 FROM delay_events e
                 JOIN train_lines l ON l.id = e.line_id
                 ORDER BY e.occurred_at DESC, e.id DESC
-                LIMIT 50
+                LIMIT ?
                 """;
         List<DelayEventViewDTO> list = new ArrayList<>();
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                list.add(new DelayEventViewDTO(
-                        rs.getString("line_name"),
-                        rs.getString("status"),
-                        rs.getInt("delay_minutes"),
-                        rs.getString("reason"),
-                        rs.getTimestamp("occurred_at").toLocalDateTime(),
-                        rs.getString("source")));
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new DelayEventViewDTO(
+                            rs.getString("line_name"),
+                            rs.getString("status"),
+                            rs.getInt("delay_minutes"),
+                            rs.getString("reason"),
+                            rs.getTimestamp("occurred_at").toLocalDateTime(),
+                            rs.getString("source")));
+                }
             }
         } catch (SQLException e) {
             throw new IllegalStateException("遅延イベントの取得に失敗しました", e);
